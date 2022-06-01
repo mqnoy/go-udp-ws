@@ -1,6 +1,8 @@
 package services
 
 import (
+	bc "bebuhcon/controller"
+	"bebuhcon/utils"
 	"log"
 	"net/http"
 
@@ -8,6 +10,7 @@ import (
 )
 
 type WebSocketService struct {
+	Bc *bc.BridgeController
 }
 
 var upgrader = websocket.Upgrader{
@@ -39,6 +42,9 @@ func (wss *WebSocketService) wsEndpoint(w http.ResponseWriter, r *http.Request) 
 	}
 	// helpful log statement to show connections
 	log.Println("Client Connected")
+	// put in map
+	utils.WsMapped = make(map[string]*websocket.Conn)
+	utils.WsMapped["default1"] = ws
 
 	wss.ReadRequest(ws)
 }
@@ -55,7 +61,9 @@ func (wss *WebSocketService) ReadRequest(conn *websocket.Conn) {
 				return
 			}
 			// print out that message for clarity
-			log.Printf("request from client: %s", string(p))
+			log.Printf("request from client: %s, msgType: %d", string(p), messageType)
+			// pasing to bridge
+			wss.Bc.ParseRequestWebsocket(conn.RemoteAddr().String(), string(p))
 
 			if err := conn.WriteMessage(messageType, p); err != nil {
 				log.Println(err)
